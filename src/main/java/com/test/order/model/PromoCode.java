@@ -12,8 +12,6 @@ import java.util.UUID;
 public class PromoCode {
   @Id
   @GeneratedValue
-  private Long id;
-  @NotEmpty
   private UUID code;
   @ManyToOne
   private Customer customer;

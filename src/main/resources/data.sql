@@ -7,3 +7,4 @@ INSERT INTO BEVERAGE_TYPE (id, name) VALUES (2, 'Tea');
 INSERT INTO BEVERAGE (id, type_id, price, description) VALUES (3, 1, 20, 'Cola 0');
 INSERT INTO BEVERAGE (id, type_id, price, description) VALUES (4, 1, 25, 'Sprite');
 INSERT INTO BEVERAGE (id, type_id, price, description) VALUES (5, 2, 15, 'Greenfield');
+INSERT INTO CUSTOMER (id, name, phone) VALUES (1, 'Ivan', '0291234567')

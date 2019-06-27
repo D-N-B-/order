@@ -24,8 +24,13 @@ public class CustomerOrder {
   @OneToMany(mappedBy="order", cascade = CascadeType.ALL, orphanRemoval = true)
   private List<OrderItem> items;
   @OneToOne
-  @JoinColumn(name = "promo_code_id", referencedColumnName = "id")
+  @JoinColumn(name = "promo_code_id", referencedColumnName = "code")
   private PromoCode promoCode;
   private OrderStatus status = OrderStatus.PENDING;
-  private LocalDate createTimestamp = LocalDate.now();
+  private LocalDate createTimestamp;
+
+  @PrePersist
+  protected void onCreate() {
+    createTimestamp = LocalDate.now();
+  }
 }
