@@ -1,6 +1,6 @@
 package com.test.order.controller;
 
-import com.test.order.model.CustomerOrder;
+import com.test.order.model.Order;
 import com.test.order.service.OrderService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
@@ -19,7 +19,7 @@ public class OrderController {
 
   @PostMapping
   @RequestMapping(method = RequestMethod.POST)
-  public CustomerOrder registerOrder(@RequestBody @Valid CustomerOrder order) {
+  public Order registerOrder(@RequestBody @Valid Order order) {
     return orderService.createOrder(order);
   }
 

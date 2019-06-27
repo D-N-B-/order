@@ -12,8 +12,9 @@ import lombok.Data;
 
 @Data
 @Builder
+@Table(name = "customer_order")
 @Entity
-public class CustomerOrder {
+public class Order {
   @Id
   @GeneratedValue
   private Long orderId;

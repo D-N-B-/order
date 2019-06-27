@@ -2,6 +2,7 @@ package com.test.order.model;
 
 import javax.persistence.*;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.test.order.model.product.Product;
 
 import lombok.Data;
@@ -19,6 +20,7 @@ public class OrderItem {
   private Product product;
   @ManyToOne(fetch = FetchType.LAZY)
   @JoinColumn(name="orderId")
-  private CustomerOrder order;
+  @JsonIgnore
+  private Order order;
   private boolean isPromo;
 }
