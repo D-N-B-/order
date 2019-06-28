@@ -30,6 +30,13 @@ public class Order {
   private OrderStatus status = OrderStatus.PENDING;
   private LocalDate createTimestamp;
 
+  public void setItems(List<OrderItem> items){
+    this.items = items;
+    if(items != null){
+      items.forEach(item -> item.setOrder(this));
+    }
+  }
+
   @PrePersist
   protected void onCreate() {
     createTimestamp = LocalDate.now();

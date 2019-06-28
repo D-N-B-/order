@@ -3,13 +3,15 @@ package com.test.order.model;
 import javax.persistence.*;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.test.order.model.product.Product;
 
 import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
 
-@Data
 @Entity
-@Table
+@Data
 public class OrderItem {
   @Id
   @GeneratedValue
@@ -22,5 +24,11 @@ public class OrderItem {
   @JoinColumn(name="orderId")
   @JsonIgnore
   private Order order;
+  @Column(name = "is_promo")
   private boolean isPromo;
+
+  @JsonIgnore
+  public void setPromo(boolean promo) {
+    isPromo = promo;
+  }
 }

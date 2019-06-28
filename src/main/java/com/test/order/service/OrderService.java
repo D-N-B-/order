@@ -1,12 +1,12 @@
 package com.test.order.service;
 
-import com.test.order.factory.OrderPopulator;
 import com.test.order.model.Order;
 import com.test.order.model.OrderItem;
 import com.test.order.model.product.Product;
 import com.test.order.model.product.ProductType;
 import com.test.order.repository.OrderRepository;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -15,19 +15,18 @@ import java.util.stream.Collectors;
 
 @Service
 public class OrderService {
+    private static final Logger logger = LoggerFactory.getLogger(OrderService.class);
     private static final int MIN_PIES_COUNT_FOR_PROMO_CODE = 2;
     private static final int EXTRA_PRODUCTS_AMOUNT = 1;
     private PromoCodeService promoCodeService;
     private ProductService productService;
     private OrderRepository orderRepository;
-    private OrderPopulator orderPopulator;
 
     @Autowired
-    public OrderService(PromoCodeService promoCodeService, ProductService productService, OrderRepository orderRepository, OrderPopulator orderPopulator) {
+    public OrderService(PromoCodeService promoCodeService, ProductService productService, OrderRepository orderRepository) {
         this.promoCodeService = promoCodeService;
         this.productService = productService;
         this.orderRepository = orderRepository;
-        this.orderPopulator = orderPopulator;
     }
 
     public Order createOrder(Order order) {
@@ -36,7 +35,6 @@ public class OrderService {
             order.getItems().addAll(getPromoProducts());
         }
 
-        orderPopulator.populate(order);
         Order savedOrder = saveOrder(order);
 
         if (isApplicableForPromoCode(savedOrder)) {
@@ -52,10 +50,9 @@ public class OrderService {
     private boolean isApplicableForPromoCode(Order order) {
         return order.getItems().stream()
                 .filter(item -> !item.isPromo())
-                .map(OrderItem::getProduct)
-                .filter(Objects::nonNull)
-                .filter(product -> ProductType.PIE == product.getType())
-                .count() >= MIN_PIES_COUNT_FOR_PROMO_CODE;
+                .filter(item -> item.getProduct() != null && ProductType.PIE == item.getProduct().getType())
+                .mapToInt(OrderItem::getAmount)
+                .sum() >= MIN_PIES_COUNT_FOR_PROMO_CODE;
     }
 
     private List<OrderItem> getPromoProducts() {
