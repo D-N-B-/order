@@ -2,6 +2,8 @@ package com.test.order.service;
 
 import com.test.order.model.Order;
 import com.test.order.model.OrderItem;
+import com.test.order.model.OrderStatus;
+import com.test.order.model.PromoCode;
 import com.test.order.model.product.Product;
 import com.test.order.model.product.ProductType;
 import com.test.order.repository.OrderRepository;
@@ -31,25 +33,49 @@ public class OrderService {
     }
 
     public Order createOrder(Order order) {
+        order.setStatus(OrderStatus.PENDING);
         //Can order be null?
-        if (containsValidPromoCode(order)) {
+        boolean containsValidPromoCode = containsValidPromoCode(order);
+        if (containsValidPromoCode) {
             order.getItems().addAll(getPromoProducts());
+            promoCodeService.markPromoCodeAsUsed(order.getPromoCode().getCode());
         }
 
-        Order savedOrder = saveOrder(order);
+        order.setPromoCode(null);
+        Order savedOrder = null;
+
+        try {
+            savedOrder = orderRepository.save(order);
+            savedOrder.setItems(populateProducts(savedOrder.getItems()));
+        } catch (Exception exception) {
+            logger.error("Error during saving an order ", exception);
+            if (containsValidPromoCode) {
+                promoCodeService.markPromoCodeAsNotUsed(order.getPromoCode().getCode());
+            }
+        }
 
         if (isApplicableForPromoCode(savedOrder)) {
-            savedOrder.setPromoCode(promoCodeService.createPromoCode());
+            logger.info("Order is applicable for promo code", savedOrder.getId());
+            savedOrder.setPromoCode(promoCodeService.createPromoCode(savedOrder));
+
         }
-        return orderRepository.getOne(order.getOrderId());
+        return orderRepository.getOne(order.getId());
     }
 
     private boolean containsValidPromoCode(Order order) {
-        return order.getPromoCode() != null && promoCodeService.isValidPromoCode(order.getPromoCode().getCode());
+        UUID promoCode = Optional.ofNullable(order.getPromoCode()).map(PromoCode::getCode).orElse(null);
+        boolean isValidPromoCode = promoCodeService.isValidPromoCode(promoCode);
+        if (!isValidPromoCode) {
+            logger.warn("Received invalid promo code {} from customer {}", promoCode, order.getCustomer().getId());
+        } else {
+            logger.info("Received promo code {} from customer {}", promoCode, order.getCustomer().getId());
+        }
+        return isValidPromoCode;
     }
 
     private boolean isApplicableForPromoCode(Order order) {
         return order.getItems().stream()
+                .filter(Objects::nonNull)
                 .filter(item -> !item.isPromo())
                 .filter(item -> item.getProduct() != null && ProductType.PIE == item.getProduct().getType())
                 .mapToInt(OrderItem::getAmount)
@@ -64,22 +90,12 @@ public class OrderService {
         return Collections.singletonList(orderItem);
     }
 
-    private Order saveOrder(Order order) {
-        order.setItems( getItemsWithProducts(order.getItems()));
-        return orderRepository.save(order);
-    }
-
-    private List<OrderItem> getItemsWithProducts(List<OrderItem> orderItems){
-        if(CollectionUtils.isEmpty(orderItems)){
-            return orderItems;
+    private List<OrderItem> populateProducts(List<OrderItem> orderItems) {
+        if (CollectionUtils.isEmpty(orderItems)) {
+            return null;
         }
 
-        List<OrderItem> itemsWithProducts = orderItems.stream()
-                .filter(Objects::nonNull)
-                .filter(item -> item.getProduct() != null && item.getProduct().getId() != null)
-                .collect(Collectors.toList());
-
-        Set<Long> productIds = itemsWithProducts.stream()
+        Set<Long> productIds = orderItems.stream()
                 .map(OrderItem::getProduct)
                 .map(Product::getId)
                 .collect(Collectors.toSet());
@@ -88,8 +104,10 @@ public class OrderService {
                 .stream()
                 .collect(Collectors.toMap(Product::getId, entry -> entry));
 
-        itemsWithProducts.forEach(item -> item.setProduct(productsMap.get(item.getProduct().getId())));
+        orderItems.forEach(item -> item.setProduct(productsMap.get(item.getProduct().getId())));
 
-        return itemsWithProducts;
+        return orderItems;
     }
+
+
 }

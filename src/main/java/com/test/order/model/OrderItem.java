@@ -9,6 +9,7 @@ import com.test.order.model.product.Product;
 import lombok.Data;
 import lombok.Getter;
 import lombok.Setter;
+import lombok.ToString;
 
 @Entity
 @Data
@@ -17,12 +18,13 @@ public class OrderItem {
   @GeneratedValue
   private Long id;
   private int amount;
-  @ManyToOne
-  @JoinColumn(name = "product_id")
+  @ManyToOne(fetch = FetchType.EAGER)
+  @JoinColumn(name = "product_id", nullable = false)
   private Product product;
   @ManyToOne(fetch = FetchType.LAZY)
-  @JoinColumn(name="orderId")
+  @JoinColumn(name="order_id")
   @JsonIgnore
+  @ToString.Exclude
   private Order order;
   @Column(name = "is_promo")
   private boolean isPromo;

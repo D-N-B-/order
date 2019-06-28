@@ -13,25 +13,22 @@ import lombok.Builder;
 import lombok.Data;
 
 @Data
-@Builder
 @Table(name = "customer_order")
 @Entity
 public class Order {
   @Id
   @GeneratedValue
-  private Long orderId;
+  private Long id;
   @NotNull
-  @ManyToOne
+  @ManyToOne(optional = false)
   private Customer customer;
   @NotEmpty
   @OneToMany(mappedBy="order", cascade = CascadeType.ALL, orphanRemoval = true)
   private List<OrderItem> items;
-  @OneToOne
-  @JoinColumn(name = "promo_code_id", referencedColumnName = "code")
+  @OneToOne(mappedBy = "order", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
   private PromoCode promoCode;
-  @JsonIgnore
   @Column(name="order_status")
-  private OrderStatus status = OrderStatus.PENDING;
+  private OrderStatus status;
   private LocalDateTime createTimestamp;
 
   public void setItems(List<OrderItem> items){
@@ -39,6 +36,11 @@ public class Order {
     if(items != null){
       items.forEach(item -> item.setOrder(this));
     }
+  }
+
+  @JsonIgnore
+  public void setStatus(OrderStatus status){
+    this.status = status;
   }
 
   @PrePersist
