@@ -18,96 +18,96 @@ import java.util.stream.Collectors;
 
 @Service
 public class OrderService {
-    private static final Logger logger = LoggerFactory.getLogger(OrderService.class);
-    private static final int MIN_PIES_COUNT_FOR_PROMO_CODE = 2;
-    private static final int EXTRA_PRODUCTS_AMOUNT = 1;
-    private PromoCodeService promoCodeService;
-    private ProductService productService;
-    private OrderRepository orderRepository;
+  private static final Logger logger = LoggerFactory.getLogger(OrderService.class);
+  private static final int MIN_PIES_COUNT_FOR_PROMO_CODE = 2;
+  private static final int EXTRA_PRODUCTS_AMOUNT = 1;
+  private PromoCodeService promoCodeService;
+  private ProductService productService;
+  private OrderRepository orderRepository;
 
-    @Autowired
-    public OrderService(PromoCodeService promoCodeService, ProductService productService, OrderRepository orderRepository) {
-        this.promoCodeService = promoCodeService;
-        this.productService = productService;
-        this.orderRepository = orderRepository;
+  @Autowired
+  public OrderService(PromoCodeService promoCodeService, ProductService productService, OrderRepository orderRepository) {
+    this.promoCodeService = promoCodeService;
+    this.productService = productService;
+    this.orderRepository = orderRepository;
+  }
+
+  public Order createOrder(Order order) {
+    order.setStatus(OrderStatus.PENDING);
+    //Can order be null?
+    boolean containsValidPromoCode = containsValidPromoCode(order);
+    if (containsValidPromoCode) {
+      order.getItems().addAll(getPromoProducts());
+      promoCodeService.markPromoCodeAsUsed(order.getPromoCode().getCode());
+    }
+    order.setPromoCode(null);
+
+    Order savedOrder = null;
+
+    try {
+      savedOrder = orderRepository.save(order);
+      savedOrder.setItems(populateProducts(savedOrder.getItems()));
+    } catch (Exception exception) {
+      logger.error("Error during saving an order ", exception);
+      if (containsValidPromoCode) {
+        promoCodeService.markPromoCodeAsNotUsed(order.getPromoCode().getCode());
+      }
     }
 
-    public Order createOrder(Order order) {
-        order.setStatus(OrderStatus.PENDING);
-        //Can order be null?
-        boolean containsValidPromoCode = containsValidPromoCode(order);
-        if (containsValidPromoCode) {
-            order.getItems().addAll(getPromoProducts());
-            promoCodeService.markPromoCodeAsUsed(order.getPromoCode().getCode());
-        }
+    if (isApplicableForPromoCode(savedOrder)) {
+      logger.info("Order is applicable for promo code", savedOrder.getId());
+      savedOrder.setPromoCode(promoCodeService.createPromoCode(savedOrder));
 
-        order.setPromoCode(null);
-        Order savedOrder = null;
+    }
+    return orderRepository.getOne(order.getId());
+  }
 
-        try {
-            savedOrder = orderRepository.save(order);
-            savedOrder.setItems(populateProducts(savedOrder.getItems()));
-        } catch (Exception exception) {
-            logger.error("Error during saving an order ", exception);
-            if (containsValidPromoCode) {
-                promoCodeService.markPromoCodeAsNotUsed(order.getPromoCode().getCode());
-            }
-        }
+  private boolean containsValidPromoCode(Order order) {
+    UUID promoCode = Optional.ofNullable(order.getPromoCode()).map(PromoCode::getCode).orElse(null);
+    boolean isValidPromoCode = promoCodeService.isValidPromoCode(promoCode);
+    if (!isValidPromoCode) {
+      logger.warn("Received invalid promo code {} from customer {}", promoCode, order.getCustomer().getId());
+    } else {
+      logger.info("Received promo code {} from customer {}", promoCode, order.getCustomer().getId());
+    }
+    return isValidPromoCode;
+  }
 
-        if (isApplicableForPromoCode(savedOrder)) {
-            logger.info("Order is applicable for promo code", savedOrder.getId());
-            savedOrder.setPromoCode(promoCodeService.createPromoCode(savedOrder));
+  private boolean isApplicableForPromoCode(Order order) {
+    return order.getItems().stream()
+        .filter(Objects::nonNull)
+        .filter(item -> !item.isPromo())
+        .filter(item -> item.getProduct() != null && ProductType.PIE == item.getProduct().getType())
+        .mapToInt(OrderItem::getAmount)
+        .sum() >= MIN_PIES_COUNT_FOR_PROMO_CODE;
+  }
 
-        }
-        return orderRepository.getOne(order.getId());
+  private List<OrderItem> getPromoProducts() {
+    OrderItem orderItem = new OrderItem();
+    orderItem.setProduct(productService.getPromoProduct());
+    orderItem.setAmount(EXTRA_PRODUCTS_AMOUNT);
+    orderItem.setPromo(true);
+    return Collections.singletonList(orderItem);
+  }
+
+  private List<OrderItem> populateProducts(List<OrderItem> orderItems) {
+    if (CollectionUtils.isEmpty(orderItems)) {
+      return null;
     }
 
-    private boolean containsValidPromoCode(Order order) {
-        UUID promoCode = Optional.ofNullable(order.getPromoCode()).map(PromoCode::getCode).orElse(null);
-        boolean isValidPromoCode = promoCodeService.isValidPromoCode(promoCode);
-        if (!isValidPromoCode) {
-            logger.warn("Received invalid promo code {} from customer {}", promoCode, order.getCustomer().getId());
-        } else {
-            logger.info("Received promo code {} from customer {}", promoCode, order.getCustomer().getId());
-        }
-        return isValidPromoCode;
-    }
+    Set<Long> productIds = orderItems.stream()
+        .map(OrderItem::getProduct)
+        .map(Product::getId)
+        .collect(Collectors.toSet());
 
-    private boolean isApplicableForPromoCode(Order order) {
-        return order.getItems().stream()
-                .filter(Objects::nonNull)
-                .filter(item -> !item.isPromo())
-                .filter(item -> item.getProduct() != null && ProductType.PIE == item.getProduct().getType())
-                .mapToInt(OrderItem::getAmount)
-                .sum() >= MIN_PIES_COUNT_FOR_PROMO_CODE;
-    }
+    Map<Long, Product> productsMap = productService.getByIds(productIds)
+        .stream()
+        .collect(Collectors.toMap(Product::getId, entry -> entry));
 
-    private List<OrderItem> getPromoProducts() {
-        OrderItem orderItem = new OrderItem();
-        orderItem.setProduct(productService.getPromoProduct());
-        orderItem.setAmount(EXTRA_PRODUCTS_AMOUNT);
-        orderItem.setPromo(true);
-        return Collections.singletonList(orderItem);
-    }
+    orderItems.forEach(item -> item.setProduct(productsMap.get(item.getProduct().getId())));
 
-    private List<OrderItem> populateProducts(List<OrderItem> orderItems) {
-        if (CollectionUtils.isEmpty(orderItems)) {
-            return null;
-        }
-
-        Set<Long> productIds = orderItems.stream()
-                .map(OrderItem::getProduct)
-                .map(Product::getId)
-                .collect(Collectors.toSet());
-
-        Map<Long, Product> productsMap = productService.getByIds(productIds)
-                .stream()
-                .collect(Collectors.toMap(Product::getId, entry -> entry));
-
-        orderItems.forEach(item -> item.setProduct(productsMap.get(item.getProduct().getId())));
-
-        return orderItems;
-    }
+    return orderItems;
+  }
 
 
 }

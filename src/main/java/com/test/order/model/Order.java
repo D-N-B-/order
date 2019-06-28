@@ -23,7 +23,7 @@ public class Order {
   @ManyToOne(optional = false)
   private Customer customer;
   @NotEmpty
-  @OneToMany(mappedBy="order", cascade = CascadeType.ALL, orphanRemoval = true)
+  @OneToMany(mappedBy="order", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
   private List<OrderItem> items;
   @OneToOne(mappedBy = "order", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
   private PromoCode promoCode;
