@@ -9,6 +9,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.util.CollectionUtils;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -40,7 +41,7 @@ public class OrderService {
         if (isApplicableForPromoCode(savedOrder)) {
             savedOrder.setPromoCode(promoCodeService.createPromoCode());
         }
-        return savedOrder;
+        return orderRepository.getOne(order.getOrderId());
     }
 
     private boolean containsValidPromoCode(Order order) {
@@ -64,18 +65,31 @@ public class OrderService {
     }
 
     private Order saveOrder(Order order) {
-        Set<Long> productIds = order.getItems().stream()
+        order.setItems( getItemsWithProducts(order.getItems()));
+        return orderRepository.save(order);
+    }
+
+    private List<OrderItem> getItemsWithProducts(List<OrderItem> orderItems){
+        if(CollectionUtils.isEmpty(orderItems)){
+            return orderItems;
+        }
+
+        List<OrderItem> itemsWithProducts = orderItems.stream()
+                .filter(Objects::nonNull)
+                .filter(item -> item.getProduct() != null && item.getProduct().getId() != null)
+                .collect(Collectors.toList());
+
+        Set<Long> productIds = itemsWithProducts.stream()
                 .map(OrderItem::getProduct)
                 .map(Product::getId)
-                .filter(Objects::nonNull).collect(Collectors.toSet());
+                .collect(Collectors.toSet());
 
-        Map<Long, Product> productsMap = productService.getAll(productIds)
+        Map<Long, Product> productsMap = productService.getByIds(productIds)
                 .stream()
                 .collect(Collectors.toMap(Product::getId, entry -> entry));
 
-        order.getItems().stream().filter(Objects::nonNull)
-                .forEach(item -> item.setProduct(productsMap.get(item.getId())));
+        itemsWithProducts.forEach(item -> item.setProduct(productsMap.get(item.getProduct().getId())));
 
-        return orderRepository.save(order);
+        return itemsWithProducts;
     }
 }

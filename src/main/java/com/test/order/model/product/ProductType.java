@@ -6,6 +6,10 @@ public enum ProductType {
 
   private String value;
 
+  public String getValue() {
+    return value;
+  }
+
   ProductType(String value) {
     this.value = value;
   }

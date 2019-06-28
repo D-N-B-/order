@@ -1,5 +1,6 @@
 package com.test.order.model.product;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.Data;
 
 import javax.persistence.*;
@@ -12,6 +13,7 @@ public class BeverageType {
   @GeneratedValue
   private Long id;
   private String name;
-  @OneToMany(mappedBy="beverageType", cascade = CascadeType.ALL, orphanRemoval = true)
+  @OneToMany(mappedBy="beverageType", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+  @JsonIgnore
   private List<Beverage> beverages;
 }

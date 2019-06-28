@@ -23,8 +23,12 @@ public class ProductService {
     return productRepository.getOne(PROMO_PRODUCT_ID);
   }
 
-  public List<Product> getAll(Set<Long> ids) {
+  public List<Product> getByIds(Set<Long> ids) {
     return productRepository.findAllById(ids);
+  }
+
+  public List<Product> getAll() {
+    return productRepository.findAll();
   }
 
 }

@@ -17,7 +17,6 @@ public class OrderController {
     this.orderService = orderService;
   }
 
-  @PostMapping
   @RequestMapping(method = RequestMethod.POST)
   public Order registerOrder(@RequestBody @Valid Order order) {
     return orderService.createOrder(order);

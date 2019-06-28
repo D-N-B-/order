@@ -10,7 +10,11 @@ import java.math.BigDecimal;
 
 @Data
 @Entity
-@Inheritance(strategy = InheritanceType.TABLE_PER_CLASS)
+@Inheritance(strategy = InheritanceType.SINGLE_TABLE)
+@DiscriminatorColumn(
+        discriminatorType = DiscriminatorType.STRING,
+        name = "type"
+)
 @JsonTypeInfo(
         use = JsonTypeInfo.Id.NAME,
         property = "product_type")
