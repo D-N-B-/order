@@ -45,9 +45,4 @@ public class PromoCodeService {
     return promoCodeRepository.save(promoCode);
   }
 
-  public PromoCode markPromoCodeAsNotUsed(UUID promoCodeId) {
-    PromoCode promoCode = promoCodeRepository.getOne(promoCodeId);
-    promoCode.setActive(true);
-    return promoCodeRepository.save(promoCode);
-  }
 }

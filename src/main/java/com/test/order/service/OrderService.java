@@ -11,6 +11,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
 
 import java.util.*;
@@ -32,6 +33,7 @@ public class OrderService {
     this.orderRepository = orderRepository;
   }
 
+  @Transactional
   public Order createOrder(Order order) {
     order.setStatus(OrderStatus.PENDING);
     //Can order be null?
@@ -40,6 +42,7 @@ public class OrderService {
       order.getItems().addAll(getPromoProducts());
       promoCodeService.markPromoCodeAsUsed(order.getPromoCode().getCode());
     }
+    //Link promo code to the order where it is used in future
     order.setPromoCode(null);
 
     Order savedOrder = null;
@@ -49,9 +52,6 @@ public class OrderService {
       savedOrder.setItems(populateProducts(savedOrder.getItems()));
     } catch (Exception exception) {
       logger.error("Error during saving an order ", exception);
-      if (containsValidPromoCode) {
-        promoCodeService.markPromoCodeAsNotUsed(order.getPromoCode().getCode());
-      }
     }
 
     if (isApplicableForPromoCode(savedOrder)) {
