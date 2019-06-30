@@ -20,8 +20,8 @@ import java.util.stream.Collectors;
 @Service
 public class OrderService {
   private static final Logger logger = LoggerFactory.getLogger(OrderService.class);
-  private static final int MIN_PIES_COUNT_FOR_PROMO_CODE = 2;
-  private static final int EXTRA_PRODUCTS_AMOUNT = 1;
+  static final int MIN_PIES_COUNT_FOR_PROMO_CODE = 2;
+  static final int EXTRA_PRODUCTS_AMOUNT = 1;
   private PromoCodeService promoCodeService;
   private ProductService productService;
   private OrderRepository orderRepository;
@@ -34,41 +34,39 @@ public class OrderService {
   }
 
   @Transactional
-  public Order createOrder(Order order) {
-    order.setStatus(OrderStatus.PENDING);
-    //Can order be null?
-    boolean containsValidPromoCode = containsValidPromoCode(order);
-    if (containsValidPromoCode) {
+  public Order createOrder(final Order order) {
+
+    if (containsValidPromoCode(order)) {
       order.getItems().addAll(getPromoProducts());
       promoCodeService.markPromoCodeAsUsed(order.getPromoCode().getCode());
     }
     //Link promo code to the order where it is used in future
     order.setPromoCode(null);
 
-    Order savedOrder = null;
-
+    Order registeredOrder = null;
     try {
-      savedOrder = orderRepository.save(order);
-      savedOrder.setItems(populateProducts(savedOrder.getItems()));
+      order.setStatus(OrderStatus.PENDING);
+      registeredOrder = orderRepository.save(order);
+      registeredOrder.setItems(populateProducts(registeredOrder.getItems()));
     } catch (Exception exception) {
       logger.error("Error during saving an order ", exception);
+      throw exception;
     }
 
-    if (isApplicableForPromoCode(savedOrder)) {
-      logger.info("Order is applicable for promo code", savedOrder.getId());
-      savedOrder.setPromoCode(promoCodeService.createPromoCode(savedOrder));
+    if (isApplicableForPromoCode(registeredOrder)) {
+      logger.info("Order is applicable for promo code", registeredOrder.getId());
+      registeredOrder.setPromoCode(promoCodeService.createPromoCode(registeredOrder));
 
     }
-    return orderRepository.getOne(order.getId());
+    return registeredOrder;
   }
 
   private boolean containsValidPromoCode(Order order) {
     UUID promoCode = Optional.ofNullable(order.getPromoCode()).map(PromoCode::getCode).orElse(null);
+    logger.info("Received promo code {} from customer {}", promoCode, order.getCustomer().getId());
     boolean isValidPromoCode = promoCodeService.isValidPromoCode(promoCode);
-    if (!isValidPromoCode) {
+    if (!isValidPromoCode && promoCode != null) {
       logger.warn("Received invalid promo code {} from customer {}", promoCode, order.getCustomer().getId());
-    } else {
-      logger.info("Received promo code {} from customer {}", promoCode, order.getCustomer().getId());
     }
     return isValidPromoCode;
   }
@@ -98,6 +96,7 @@ public class OrderService {
     Set<Long> productIds = orderItems.stream()
         .map(OrderItem::getProduct)
         .map(Product::getId)
+        .filter(Objects::nonNull)
         .collect(Collectors.toSet());
 
     Map<Long, Product> productsMap = productService.getByIds(productIds)
