@@ -1,6 +1,7 @@
 package com.test.order.model.product;
 
 public enum ProductType {
+
   BEVERAGE(Values.BEVERAGE),
   PIE(Values.PIE);
 

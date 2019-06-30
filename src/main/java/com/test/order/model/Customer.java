@@ -11,12 +11,15 @@ import java.rmi.server.UID;
 @Entity
 @Table
 public class Customer {
+
   @Id
   @GeneratedValue
   private Long id;
+
   @NotEmpty
   @Column
   private String name;
+
   @Pattern(regexp = "\\d{10}|(?:\\d{3}-){2}\\d{4}|\\(\\d{3}\\)\\d{3}-?\\d{4}")
   @Column
   private String phone;

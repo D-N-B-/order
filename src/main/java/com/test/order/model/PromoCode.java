@@ -12,14 +12,17 @@ import java.util.UUID;
 @Entity
 @Table
 public class PromoCode {
+
   @Id
   @GeneratedValue
   private UUID code;
+
   @OneToOne(cascade = CascadeType.PERSIST)
   @JoinColumn(name = "order_id", referencedColumnName = "id")
   @JsonIgnore
   @ToString.Exclude
   private Order order;
+
   @Column
   private boolean active;
 

@@ -13,6 +13,7 @@ import javax.validation.constraints.NotNull;
 @Table
 @DiscriminatorValue(ProductType.Values.BEVERAGE)
 public class Beverage extends Product {
+
   @NotNull(message = "Beverage kind is required")
   @ManyToOne
   @JoinColumn(name="type_id")

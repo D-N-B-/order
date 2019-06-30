@@ -23,11 +23,14 @@ import java.math.BigDecimal;
         @JsonSubTypes.Type(value = Pie.class, name = ProductType.Values.PIE)
 })
 public abstract class Product {
+
   @Id
   @GeneratedValue
   private Long id;
+
   @NotNull(message = "Price is required")
   private BigDecimal price;
+
   @NotNull(message = "Description is required")
   private String description;
 

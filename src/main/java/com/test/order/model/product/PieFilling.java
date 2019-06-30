@@ -13,9 +13,11 @@ import javax.validation.constraints.Size;
 @Entity
 @Table
 public class PieFilling {
+
   @Id
   @GeneratedValue
   private Long id;
+
   @NotNull(message = "Pie filling name is required")
   @Size(min = 2, message="Name must be longer than 2")
   private String name;

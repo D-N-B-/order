@@ -13,6 +13,7 @@ import javax.validation.constraints.NotNull;
 @Table
 @DiscriminatorValue(ProductType.Values.PIE)
 public class Pie extends Product {
+
   @NotNull(message = "Pie filling is required")
   @OneToOne
   private PieFilling filling;

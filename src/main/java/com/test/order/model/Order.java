@@ -16,19 +16,25 @@ import lombok.Data;
 @Table(name = "customer_order")
 @Entity
 public class Order {
+
   @Id
   @GeneratedValue
   private Long id;
+
   @NotNull
   @ManyToOne(optional = false)
   private Customer customer;
+
   @NotEmpty
   @OneToMany(mappedBy="order", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
   private List<OrderItem> items;
+
   @OneToOne(mappedBy = "order", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
   private PromoCode promoCode;
+
   @Column(name="order_status")
   private OrderStatus status;
+
   private LocalDateTime createTimestamp;
 
   public void setItems(List<OrderItem> items){
